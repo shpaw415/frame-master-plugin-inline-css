@@ -65,13 +65,14 @@ Unresolved links (missing file / failed fetch with no cache) are left unchanged.
 
 ## Publishing
 
-Pushing to `main` with a **new** `version` in `package.json` (not yet on npm) triggers the GitHub Actions workflow that publishes to the public npm registry.
+Publishes via **npm Trusted Publishing (OIDC)** — no `NPM_TOKEN` secret.
 
-1. Bump `version` in `package.json`
-2. Commit and push to `main`
-3. Workflow publishes and creates tag `vX.Y.Z`
-
-Requires repository secret **`NPM_TOKEN`** (npm automation token with publish rights), or npm Trusted Publishing configured for this repo.
+1. On npm, open the package → **Settings** → **Trusted Publisher** → GitHub Actions:
+   - **Organization or user:** `shpaw415`
+   - **Repository:** `frame-master-plugin-inline-css`
+   - **Workflow filename:** `publish.yml`
+2. Bump `version` in `package.json`, commit, and push to `main`
+3. Workflow runs tests, publishes if the version is new, and creates tag `vX.Y.Z`
 
 ## License
 

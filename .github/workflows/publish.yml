@@ -1,6 +1,7 @@
 name: Publish to npm
 
-# Publishes when package.json version on main is not yet on the npm registry.
+# Publishes via npm Trusted Publishing (OIDC) when package.json version
+# on main is not yet on the npm registry. No NPM_TOKEN required.
 on:
   push:
     branches: [main]
@@ -24,7 +25,7 @@ on:
 
 permissions:
   contents: write
-  id-token: write
+  id-token: write # required for npm Trusted Publishing (OIDC)
 
 concurrency:
   group: npm-publish
@@ -46,12 +47,13 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Setup Node (npm publish + provenance)
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
+      # Trusted Publishing requires a recent npm (OIDC support)
       - name: Upgrade npm for OIDC trusted publishing
         run: |
           npm install -g npm@latest
@@ -104,29 +106,32 @@ jobs:
         if: ${{ steps.decide.outputs.publish == 'true' }}
         run: npm pack --dry-run
 
-      - name: Publish to npm
-        if: ${{ steps.decide.outputs.publish == 'true' && (inputs.dry_run != true) }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Configure npmrc for Trusted Publishing (OIDC)
+        if: ${{ steps.decide.outputs.publish == 'true' && inputs.dry_run != true }}
         run: |
           set -euo pipefail
-          ARGS=(--access public --provenance)
+          # setup-node writes an auth token line that blocks OIDC when empty/unused.
+          # Trusted Publishing uses the GitHub OIDC token — no NPM_TOKEN.
+          NPMRC="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "provenance=true"
+          } > "$NPMRC"
+          unset NODE_AUTH_TOKEN || true
+          echo "NPM_CONFIG_USERCONFIG=$NPMRC" >> "$GITHUB_ENV"
+          echo "npmrc ready for OIDC:"
+          cat "$NPMRC"
 
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "No NPM_TOKEN — using npm Trusted Publishing (OIDC)"
-            unset NODE_AUTH_TOKEN
-            NPMRC="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
-            {
-              echo "registry=https://registry.npmjs.org/"
-              echo "provenance=true"
-            } > "$NPMRC"
-            export NPM_CONFIG_USERCONFIG="$NPMRC"
-          else
-            echo "Publishing with NPM_TOKEN"
-          fi
-
+      - name: Publish to npm
+        if: ${{ steps.decide.outputs.publish == 'true' && inputs.dry_run != true }}
+        env:
+          # Ensure token path is not used; OIDC only
+          NODE_AUTH_TOKEN: ""
+        run: |
+          set -euo pipefail
+          unset NODE_AUTH_TOKEN || true
           echo "npm $(npm -v) / node $(node -v)"
-          npm publish "${ARGS[@]}"
+          npm publish --access public --provenance
 
       - name: Create git tag
         if: ${{ steps.decide.outputs.publish == 'true' && inputs.dry_run != true }}
@@ -152,5 +157,6 @@ jobs:
             echo "- **Version:** \`${{ steps.pkg.outputs.version }}\`"
             echo "- **Already on npm:** \`${{ steps.check.outputs.exists }}\`"
             echo "- **Published:** \`${{ steps.decide.outputs.publish }}\`"
+            echo "- **Auth:** npm Trusted Publishing (OIDC) — no NPM_TOKEN"
             echo "- **npm:** https://www.npmjs.com/package/${{ steps.pkg.outputs.name }}"
           } >> "$GITHUB_STEP_SUMMARY"
