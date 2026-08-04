@@ -56,12 +56,12 @@ export default function InlineCss(
 }
 
 export { inlineCssInHtml } from "./src/inline-html";
+export type { ResolveCssOptions, ResolvedStylesheet } from "./src/resolve-css";
 export {
+	buildStyleTag,
+	escapeCssForStyleTag,
 	extractStylesheetLinks,
 	resolveAllStylesheets,
 	resolveLocalCss,
 	resolveRemoteCss,
-	escapeCssForStyleTag,
-	buildStyleTag,
 } from "./src/resolve-css";
-export type { ResolveCssOptions, ResolvedStylesheet } from "./src/resolve-css";

@@ -1,13 +1,13 @@
-import { describe, expect, test, beforeAll, afterAll } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { inlineCssInHtml } from "../src/inline-html";
 import {
 	buildStyleTag,
 	escapeCssForStyleTag,
 	extractStylesheetLinks,
 	resolveLocalCss,
 } from "../src/resolve-css";
-import { inlineCssInHtml } from "../src/inline-html";
 
 const FIXTURE_ROOT = join(import.meta.dir, ".fixtures");
 const HTML_DIR = join(FIXTURE_ROOT, "pages");
@@ -21,7 +21,10 @@ beforeAll(async () => {
 		join(CSS_DIR, "app.css"),
 		"body { color: red; }\n/* </style> probe */\n",
 	);
-	await writeFile(join(CSS_DIR, "print.css"), "@media print { body { color: black; } }");
+	await writeFile(
+		join(CSS_DIR, "print.css"),
+		"@media print { body { color: black; } }",
+	);
 });
 
 afterAll(async () => {
@@ -55,7 +58,7 @@ describe("escapeCssForStyleTag", () => {
 describe("buildStyleTag", () => {
 	test("includes data attributes and media", () => {
 		const tag = buildStyleTag("body{}", "./a.css", "print");
-		expect(tag).toContain('data-inline-css');
+		expect(tag).toContain("data-inline-css");
 		expect(tag).toContain('data-href="./a.css"');
 		expect(tag).toContain('media="print"');
 		expect(tag).toContain("body{}");
@@ -67,6 +70,50 @@ describe("resolveLocalCss", () => {
 		const htmlPath = join(HTML_DIR, "index.html");
 		const css = await resolveLocalCss("./static/app.css", htmlPath);
 		expect(css).toContain("color: red");
+	});
+
+	test("resolves root-relative paths against resolveRoots, not OS root", async () => {
+		const htmlPath = join(HTML_DIR, "index.html");
+		// /static/app.css must map to FIXTURE_ROOT/pages/static/app.css via roots,
+		// never to the filesystem path /static/app.css
+		const css = await resolveLocalCss("/static/app.css", htmlPath, [
+			HTML_DIR,
+			FIXTURE_ROOT,
+		]);
+		expect(css).toContain("color: red");
+	});
+
+	test("resolves root-relative paths via cwd when under project root", async () => {
+		const htmlPath = join(HTML_DIR, "index.html");
+		// Place a file under a temp project-style root and point resolveRoots at it
+		const projectRoot = join(FIXTURE_ROOT, "project");
+		const absCssDir = join(projectRoot, "assets");
+		await mkdir(absCssDir, { recursive: true });
+		await writeFile(join(absCssDir, "site.css"), ".root { color: blue; }");
+
+		const css = await resolveLocalCss("/assets/site.css", htmlPath, [
+			projectRoot,
+		]);
+		expect(css).toContain("color: blue");
+	});
+});
+
+describe("inlineCssInHtml root-relative", () => {
+	test("inlines root-relative stylesheet links from project roots", async () => {
+		const htmlPath = join(HTML_DIR, "index.html");
+		const html = `<!doctype html><html><head>
+			<link rel="stylesheet" href="/static/app.css" />
+		</head><body></body></html>`;
+
+		const out = await inlineCssInHtml(html, htmlPath, {
+			inlineRemote: false,
+			resolveRoots: [HTML_DIR],
+			warn: () => {},
+		});
+
+		expect(out).not.toContain('rel="stylesheet"');
+		expect(out).toContain("data-inline-css");
+		expect(out).toContain("color: red");
 	});
 });
 

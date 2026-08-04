@@ -1,8 +1,8 @@
 import {
 	buildStyleTag,
 	escapeCssForStyleTag,
-	resolveAllStylesheets,
 	type ResolveCssOptions,
+	resolveAllStylesheets,
 } from "./resolve-css";
 
 /**
@@ -43,4 +43,4 @@ export async function inlineCssInHtml(
 	return rewriter.transform(html);
 }
 
-export { escapeCssForStyleTag, buildStyleTag };
+export { buildStyleTag, escapeCssForStyleTag };

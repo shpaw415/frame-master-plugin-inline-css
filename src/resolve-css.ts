@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { dirname, isAbsolute, join, normalize, resolve } from "node:path";
 import { mkdir } from "node:fs/promises";
+import { dirname, isAbsolute, join, normalize, resolve } from "node:path";
 
 export type ResolveCssOptions = {
 	/** When true, fetch and inline remote http(s) stylesheets. Default: true */
@@ -15,7 +15,11 @@ export type ResolveCssOptions = {
 	 * false in production (still writes cache for next runs).
 	 */
 	preferCache?: boolean;
-	/** Extra roots to try when resolving absolute/root-relative local paths. */
+	/**
+	 * Roots for root-relative local paths (`/assets/x.css`).
+	 * Paths starting with `/` resolve under these roots (project-relative),
+	 * not the OS filesystem root.
+	 */
 	resolveRoots?: string[];
 	/** Custom fetch User-Agent for remote stylesheets (Google Fonts, etc.). */
 	userAgent?: string;
@@ -115,6 +119,13 @@ function escapeAttr(value: string): string {
 		.replace(/>/g, "&gt;");
 }
 
+/**
+ * Resolve a local stylesheet href to file contents.
+ *
+ * Root-relative web paths (`/assets/x.css`) are resolved against `resolveRoots`
+ * / project cwd — never the OS filesystem root. On POSIX, `path.isAbsolute("/x")`
+ * is true, so we must treat leading `/` as a web root, not a system path.
+ */
 export async function resolveLocalCss(
 	href: string,
 	htmlPath: string,
@@ -123,12 +134,10 @@ export async function resolveLocalCss(
 	const candidates: string[] = [];
 	const htmlDir = dirname(htmlPath);
 
-	if (isAbsolute(href) && !href.startsWith("//")) {
-		// Absolute filesystem path
-		candidates.push(href);
-	} else if (href.startsWith("/")) {
-		// Root-relative web path: try each resolve root + cwd
-		const relative = href.slice(1);
+	// Root-relative web path (/assets/x.css) — not an OS absolute path.
+	// Protocol-relative URLs (//cdn...) are remote and should not reach here.
+	if (href.startsWith("/") && !href.startsWith("//")) {
+		const relative = href.replace(/^\/+/, "");
 		for (const root of resolveRoots) {
 			candidates.push(join(root, relative));
 		}
@@ -136,6 +145,9 @@ export async function resolveLocalCss(
 		// Also try next to the HTML file's parent chain (build root)
 		candidates.push(join(htmlDir, relative));
 		candidates.push(join(dirname(htmlDir), relative));
+	} else if (isAbsolute(href)) {
+		// True OS absolute path (e.g. Windows drive letter); rare for hrefs
+		candidates.push(href);
 	} else {
 		// Relative to the HTML file
 		candidates.push(normalize(resolve(htmlDir, href)));
@@ -180,9 +192,7 @@ export async function resolveRemoteCss(
 			},
 		});
 		if (!res.ok) {
-			options.warn?.(
-				`[inline-css] Failed to fetch ${url}: HTTP ${res.status}`,
-			);
+			options.warn?.(`[inline-css] Failed to fetch ${url}: HTTP ${res.status}`);
 			// Fall back to stale cache if available
 			if (await cached.exists()) {
 				return { css: await cached.text(), source: "cache" };
