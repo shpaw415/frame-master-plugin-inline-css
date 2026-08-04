@@ -1,6 +1,6 @@
 {
 	"name": "frame-master-plugin-inline-css",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Frame-Master plugin that inlines CSS stylesheet links into <style> tags during the build finally HTML hook to prevent FOUC / style flicker.",
 	"type": "module",
 	"main": "index.ts",
