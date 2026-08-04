@@ -1,0 +1,8 @@
+test
+.github
+.gitignore
+*.tgz
+.frame-master
+bun.lock
+tsconfig.json
+**/*.test.ts

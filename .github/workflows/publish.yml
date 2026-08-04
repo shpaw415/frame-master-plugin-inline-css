@@ -1,0 +1,156 @@
+name: Publish to npm
+
+# Publishes when package.json version on main is not yet on the npm registry.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "index.ts"
+      - "src/**"
+      - ".github/workflows/publish.yml"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Publish even if version already exists on npm (will fail if not allowed)"
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: "Pack only; do not publish"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Test and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node (npm publish + provenance)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Upgrade npm for OIDC trusted publishing
+        run: |
+          npm install -g npm@latest
+          echo "npm $(npm -v) / node $(node -v)"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun test
+
+      - name: Read package version
+        id: pkg
+        run: |
+          set -euo pipefail
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Package $NAME@$VERSION"
+
+      - name: Check if version already published
+        id: check
+        run: |
+          set -euo pipefail
+          NAME="${{ steps.pkg.outputs.name }}"
+          VERSION="${{ steps.pkg.outputs.version }}"
+          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Version ${VERSION} already on npm"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Version ${VERSION} not on npm — will publish"
+          fi
+
+      - name: Decide whether to publish
+        id: decide
+        run: |
+          set -euo pipefail
+          EXISTS="${{ steps.check.outputs.exists }}"
+          FORCE="${{ inputs.force || false }}"
+          if [ "$EXISTS" = "true" ] && [ "$FORCE" != "true" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Skip publish (version already exists). Bump package.json version to release."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pack dry-run
+        if: ${{ steps.decide.outputs.publish == 'true' }}
+        run: npm pack --dry-run
+
+      - name: Publish to npm
+        if: ${{ steps.decide.outputs.publish == 'true' && (inputs.dry_run != true) }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          ARGS=(--access public --provenance)
+
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "No NPM_TOKEN — using npm Trusted Publishing (OIDC)"
+            unset NODE_AUTH_TOKEN
+            NPMRC="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+            {
+              echo "registry=https://registry.npmjs.org/"
+              echo "provenance=true"
+            } > "$NPMRC"
+            export NPM_CONFIG_USERCONFIG="$NPMRC"
+          else
+            echo "Publishing with NPM_TOKEN"
+          fi
+
+          echo "npm $(npm -v) / node $(node -v)"
+          npm publish "${ARGS[@]}"
+
+      - name: Create git tag
+        if: ${{ steps.decide.outputs.publish == 'true' && inputs.dry_run != true }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.pkg.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
+            echo "Tag v${VERSION} already exists"
+          else
+            git tag "v${VERSION}"
+            git push origin "v${VERSION}"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Publish result"
+            echo ""
+            echo "- **Package:** \`${{ steps.pkg.outputs.name }}\`"
+            echo "- **Version:** \`${{ steps.pkg.outputs.version }}\`"
+            echo "- **Already on npm:** \`${{ steps.check.outputs.exists }}\`"
+            echo "- **Published:** \`${{ steps.decide.outputs.publish }}\`"
+            echo "- **npm:** https://www.npmjs.com/package/${{ steps.pkg.outputs.name }}"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,49 @@
+{
+	"name": "frame-master-plugin-inline-css",
+	"version": "0.1.0",
+	"description": "Frame-Master plugin that inlines CSS stylesheet links into <style> tags during the build finally HTML hook to prevent FOUC / style flicker.",
+	"type": "module",
+	"main": "index.ts",
+	"exports": {
+		".": "./index.ts"
+	},
+	"files": [
+		"index.ts",
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"keywords": [
+		"frame-master",
+		"plugin",
+		"css",
+		"inline",
+		"fouc",
+		"html",
+		"build"
+	],
+	"author": "shpaw415",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/shpaw415/frame-master-plugin-inline-css.git"
+	},
+	"bugs": {
+		"url": "https://github.com/shpaw415/frame-master-plugin-inline-css/issues"
+	},
+	"homepage": "https://github.com/shpaw415/frame-master-plugin-inline-css#readme",
+	"peerDependencies": {
+		"frame-master": "^3.0.0",
+		"typescript": "^5"
+	},
+	"private": false,
+	"devDependencies": {
+		"@types/bun": "latest",
+		"frame-master": "^3.2.0",
+		"typescript": "^5"
+	},
+	"scripts": {
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
+	}
+}
