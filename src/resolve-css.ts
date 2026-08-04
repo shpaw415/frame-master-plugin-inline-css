@@ -34,12 +34,25 @@ export type ResolvedStylesheet = {
 	source: "local" | "remote" | "cache";
 };
 
+/**
+ * HTML attribute that opts a specific `<link rel="stylesheet">` out of inlining.
+ * Presence alone disables the plugin for that tag (value is ignored).
+ *
+ * @example
+ * ```html
+ * <link rel="stylesheet" href="./critical.css" data-no-inline-css />
+ * ```
+ */
+export const NO_INLINE_CSS_ATTR = "data-no-inline-css";
+
 const STYLESHEET_LINK_RE =
 	/<link\b[^>]*\brel\s*=\s*(?:"[^"]*\bstylesheet\b[^"]*"|'[^']*\bstylesheet\b[^']*'|stylesheet)[^>]*>/gi;
 
 const HREF_RE = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
 const MEDIA_RE = /\bmedia\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
 const REL_RE = /\brel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
+/** Matches data-no-inline-css as a boolean attribute or with any value. */
+const NO_INLINE_ATTR_RE = /\bdata-no-inline-css\b/i;
 
 const DEFAULT_UA =
 	"Mozilla/5.0 (compatible; frame-master-plugin-inline-css/0.1; +https://github.com/shpaw415/frame-master-plugin-inline-css)";
@@ -52,6 +65,9 @@ export function extractStylesheetLinks(
 
 	for (const match of html.matchAll(STYLESHEET_LINK_RE)) {
 		const tag = match[0] ?? "";
+		// Opt-out: leave this link alone (do not resolve / inline).
+		if (hasNoInlineCssAttr(tag)) continue;
+
 		const rel = pickAttr(tag, REL_RE)?.toLowerCase() ?? "";
 		if (!rel.split(/\s+/).includes("stylesheet")) continue;
 
@@ -72,6 +88,11 @@ function pickAttr(tag: string, re: RegExp): string | null {
 	const m = tag.match(re);
 	if (!m) return null;
 	return m[1] ?? m[2] ?? m[3] ?? null;
+}
+
+/** True when the raw tag markup includes the opt-out attribute. */
+export function hasNoInlineCssAttr(tag: string): boolean {
+	return NO_INLINE_ATTR_RE.test(tag);
 }
 
 export function isRemoteHref(href: string): boolean {

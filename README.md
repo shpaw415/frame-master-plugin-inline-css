@@ -43,6 +43,18 @@ export default {
 
 Original CSS files on disk are **kept** so other plugins and tooling can still inspect them.
 
+### Opt out per link
+
+Add **`data-no-inline-css`** on a specific `<link>` to leave it as an external stylesheet (presence is enough; the value is ignored):
+
+```html
+<!-- stays as a <link> -->
+<link rel="stylesheet" href="./static/deferred.css" data-no-inline-css />
+
+<!-- still inlined -->
+<link rel="stylesheet" href="./static/critical.css" />
+```
+
 ## How it works
 
 1. Runs in Bun’s build pipeline via Frame-Master plugin chaining: `build.finally("html", …)`.
@@ -62,6 +74,10 @@ Original CSS files on disk are **kept** so other plugins and tooling can still i
 | `warn`         | `fn`       | `console.warn`                               | Warning logger for missing files / fetch errors. |
 
 Unresolved links (missing file / failed fetch with no cache) are left unchanged.
+
+| Attribute             | Description |
+|-----------------------|-------------|
+| `data-no-inline-css`  | On a `<link rel="stylesheet">`, skips inlining for **that tag only**. |
 
 ## Publishing
 

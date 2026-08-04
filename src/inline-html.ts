@@ -1,6 +1,7 @@
 import {
 	buildStyleTag,
 	escapeCssForStyleTag,
+	NO_INLINE_CSS_ATTR,
 	type ResolveCssOptions,
 	resolveAllStylesheets,
 } from "./resolve-css";
@@ -8,6 +9,9 @@ import {
 /**
  * Pre-resolve stylesheet contents, then use HTMLRewriter to replace
  * <link rel="stylesheet"> with <style> tags containing the CSS.
+ *
+ * Links carrying {@link NO_INLINE_CSS_ATTR} (`data-no-inline-css`) are left
+ * unchanged so individual stylesheets can opt out of inlining.
  *
  * Original CSS files on disk are never deleted.
  */
@@ -21,6 +25,9 @@ export async function inlineCssInHtml(
 
 	const rewriter = new HTMLRewriter().on("link", {
 		element(el) {
+			// Per-tag opt-out: leave this link as-is.
+			if (el.hasAttribute(NO_INLINE_CSS_ATTR)) return;
+
 			const rel = (el.getAttribute("rel") ?? "").toLowerCase();
 			const relTokens = rel.split(/\s+/).filter(Boolean);
 			if (!relTokens.includes("stylesheet")) return;
