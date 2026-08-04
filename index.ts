@@ -15,6 +15,7 @@ export type InlineCssPluginOptions = ResolveCssOptions;
  * - Local CSS is read from disk (paths resolved relative to the HTML file).
  * - Remote CSS is fetched; responses are cached under `cacheDir` (great for dev).
  * - Original CSS asset files are always kept for other plugins / tooling.
+ * - Per-tag opt-out: add `data-no-inline-css` on a `<link>` to leave it alone.
  *
  * @example
  * ```ts
@@ -61,6 +62,8 @@ export {
 	buildStyleTag,
 	escapeCssForStyleTag,
 	extractStylesheetLinks,
+	hasNoInlineCssAttr,
+	NO_INLINE_CSS_ATTR,
 	resolveAllStylesheets,
 	resolveLocalCss,
 	resolveRemoteCss,

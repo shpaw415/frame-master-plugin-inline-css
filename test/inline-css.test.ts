@@ -45,6 +45,16 @@ describe("extractStylesheetLinks", () => {
 			{ href: "./static/print.css", media: "print" },
 		]);
 	});
+
+	test("skips links with data-no-inline-css", () => {
+		const html = `
+			<link rel="stylesheet" href="./static/app.css" data-no-inline-css />
+			<link rel="stylesheet" href="./static/print.css" data-no-inline-css="true" />
+			<link rel="stylesheet" href="./static/kept.css" />
+		`;
+		const links = extractStylesheetLinks(html);
+		expect(links).toEqual([{ href: "./static/kept.css", media: null }]);
+	});
 });
 
 describe("escapeCssForStyleTag", () => {
@@ -153,6 +163,64 @@ describe("inlineCssInHtml", () => {
 		const out = await inlineCssInHtml(html, htmlPath, { warn: () => {} });
 		expect(out).toContain('href="./static/missing.css"');
 		expect(out).not.toContain("data-inline-css");
+	});
+
+	test("leaves links with data-no-inline-css alone", async () => {
+		const htmlPath = join(HTML_DIR, "index.html");
+		const html = `<!doctype html><html><head>
+			<link rel="stylesheet" href="./static/app.css" data-no-inline-css />
+			<link rel="stylesheet" href="./static/print.css" />
+		</head><body></body></html>`;
+
+		const out = await inlineCssInHtml(html, htmlPath, {
+			inlineRemote: false,
+			warn: () => {},
+		});
+
+		// Opted-out link stays as a stylesheet link (attribute preserved).
+		expect(out).toContain('href="./static/app.css"');
+		expect(out).toContain("data-no-inline-css");
+		expect(out).toMatch(
+			/<link[^>]*href="\.\/static\/app\.css"[^>]*data-no-inline-css/,
+		);
+
+		// Other stylesheet is still inlined.
+		expect(out).toContain("data-inline-css");
+		expect(out).toContain("@media print");
+		expect(out).not.toMatch(
+			/<link[^>]*href="\.\/static\/print\.css"/,
+		);
+	});
+
+	test("does not inline a stylesheet when only opted-out links reference it", async () => {
+		const htmlPath = join(HTML_DIR, "index.html");
+		const html = `<link rel="stylesheet" href="./static/app.css" data-no-inline-css />`;
+		const out = await inlineCssInHtml(html, htmlPath, { warn: () => {} });
+		expect(out).toContain('rel="stylesheet"');
+		expect(out).toContain('href="./static/app.css"');
+		expect(out).not.toContain("data-inline-css");
+		expect(out).not.toContain("<style");
+	});
+
+	test("inlines same href for non-opted-out link while leaving opted-out link", async () => {
+		const htmlPath = join(HTML_DIR, "index.html");
+		const html = `<!doctype html><html><head>
+			<link rel="stylesheet" href="./static/app.css" data-no-inline-css />
+			<link rel="stylesheet" href="./static/app.css" />
+		</head><body></body></html>`;
+
+		const out = await inlineCssInHtml(html, htmlPath, {
+			inlineRemote: false,
+			warn: () => {},
+		});
+
+		// One link remains (opted out), one becomes a style tag.
+		expect(out).toContain("data-no-inline-css");
+		expect(out).toMatch(
+			/<link[^>]*href="\.\/static\/app\.css"[^>]*data-no-inline-css/,
+		);
+		expect(out).toContain("data-inline-css");
+		expect(out).toContain("color: red");
 	});
 
 	test("inlines remote CSS with cache", async () => {
