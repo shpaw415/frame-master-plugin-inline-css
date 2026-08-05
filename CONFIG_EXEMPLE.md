@@ -32,8 +32,7 @@ export default {
 
       // User-Agent sent when fetching remote stylesheets.
       // Default: plugin UA string
-      userAgent:
-        "Mozilla/5.0 (compatible; frame-master-plugin-inline-css/0.1)",
+      userAgent: "Mozilla/5.0 (compatible; frame-master-plugin-inline-css/0.1)",
 
       // Warning logger for missing local files / failed remote fetches.
       // Default: console.warn
@@ -45,14 +44,14 @@ export default {
 
 ### 2. Options summary
 
-| Option         | Type                      | Default                                 | Description                                            |
-| -------------- | ------------------------- | --------------------------------------- | ------------------------------------------------------ |
-| `inlineRemote` | `boolean`                 | `true`                                  | Fetch and inline `http(s)` stylesheets.                |
-| `cacheDir`     | `string`                  | `.frame-master/cache/remote-css`        | Disk cache for remote CSS.                             |
-| `preferCache`  | `boolean`                 | `true` when `NODE_ENV !== "production"` | Use cached remote CSS when present.                    |
-| `resolveRoots` | `string[]`                | `[cwd, htmlDir]`                        | Roots for root-relative paths (`/assets/x.css`).       |
-| `userAgent`    | `string`                  | plugin UA                               | User-Agent for remote fetches.                         |
-| `warn`         | `(message: string) => void` | `console.warn`                        | Logger for missing files / fetch errors.               |
+| Option         | Type                        | Default                                 | Description                                      |
+| -------------- | --------------------------- | --------------------------------------- | ------------------------------------------------ |
+| `inlineRemote` | `boolean`                   | `true`                                  | Fetch and inline `http(s)` stylesheets.          |
+| `cacheDir`     | `string`                    | `.frame-master/cache/remote-css`        | Disk cache for remote CSS.                       |
+| `preferCache`  | `boolean`                   | `true` when `NODE_ENV !== "production"` | Use cached remote CSS when present.              |
+| `resolveRoots` | `string[]`                  | `[cwd, htmlDir]`                        | Roots for root-relative paths (`/assets/x.css`). |
+| `userAgent`    | `string`                    | plugin UA                               | User-Agent for remote fetches.                   |
+| `warn`         | `(message: string) => void` | `console.warn`                          | Logger for missing files / fetch errors.         |
 
 Unresolved links (missing file / failed fetch with no cache) are left unchanged.
 
@@ -70,7 +69,7 @@ Remote `<link rel="stylesheet" href="https://…">` tags stay as links; local CS
 
 HTML:
 
-```html
+```tsx
 <link rel="stylesheet" href="/static/style.css" />
 ```
 
@@ -84,17 +83,14 @@ InlineCss({
 
 ### 5. Per-tag opt-out
 
-```html
+```tsx
 <!-- stays external -->
 <link rel="stylesheet" href="./static/deferred.css" data-no-inline-css />
 
 <!-- still inlined -->
 <link rel="stylesheet" href="./static/critical.css" />
 <link rel="stylesheet" href="/assets/theme.css" />
-<link
-  rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Inter"
-/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter" />
 ```
 
 `data-no-inline-css` is presence-only (value is ignored).
@@ -103,14 +99,14 @@ InlineCss({
 
 **Before**
 
-```html
+```tsx
 <link rel="stylesheet" href="./static/style.css" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto" />
 ```
 
 **After**
 
-```html
+```tsx
 <style data-inline-css data-href="./static/style.css">
   /* file contents */
 </style>

@@ -29,14 +29,14 @@ export default {
 
 ### Before
 
-```html
+```tsx
 <link rel="stylesheet" href="./static/style.css" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto" />
 ```
 
 ### After
 
-```html
+```tsx
 <style data-inline-css data-href="./static/style.css">/* file contents */</style>
 <style data-inline-css data-href="https://fonts.googleapis.com/css2?family=Roboto">/* fetched css */</style>
 ```
@@ -47,7 +47,7 @@ Original CSS files on disk are **kept** so other plugins and tooling can still i
 
 Add **`data-no-inline-css`** on a specific `<link>` to leave it as an external stylesheet (presence is enough; the value is ignored):
 
-```html
+```tsx
 <!-- stays as a <link> -->
 <link rel="stylesheet" href="./static/deferred.css" data-no-inline-css />
 
@@ -64,20 +64,20 @@ Add **`data-no-inline-css`** on a specific `<link>` to leave it as an external s
 
 ## Options
 
-| Option         | Type       | Default                                      | Description |
-|----------------|------------|----------------------------------------------|-------------|
-| `inlineRemote` | `boolean`  | `true`                                       | Fetch and inline `http(s)` stylesheets. |
-| `cacheDir`     | `string`   | `.frame-master/cache/remote-css`             | Disk cache for remote CSS. |
-| `preferCache`  | `boolean`  | `true` when `NODE_ENV !== "production"`      | Use cached remote CSS when present. |
-| `resolveRoots` | `string[]` | `[cwd, htmlDir]`                             | Extra roots for root-relative paths (`/assets/x.css`). |
-| `userAgent`    | `string`   | plugin UA                                    | User-Agent used for remote fetches. |
-| `warn`         | `fn`       | `console.warn`                               | Warning logger for missing files / fetch errors. |
+| Option         | Type       | Default                                 | Description                                            |
+| -------------- | ---------- | --------------------------------------- | ------------------------------------------------------ |
+| `inlineRemote` | `boolean`  | `true`                                  | Fetch and inline `http(s)` stylesheets.                |
+| `cacheDir`     | `string`   | `.frame-master/cache/remote-css`        | Disk cache for remote CSS.                             |
+| `preferCache`  | `boolean`  | `true` when `NODE_ENV !== "production"` | Use cached remote CSS when present.                    |
+| `resolveRoots` | `string[]` | `[cwd, htmlDir]`                        | Extra roots for root-relative paths (`/assets/x.css`). |
+| `userAgent`    | `string`   | plugin UA                               | User-Agent used for remote fetches.                    |
+| `warn`         | `fn`       | `console.warn`                          | Warning logger for missing files / fetch errors.       |
 
 Unresolved links (missing file / failed fetch with no cache) are left unchanged.
 
-| Attribute             | Description |
-|-----------------------|-------------|
-| `data-no-inline-css`  | On a `<link rel="stylesheet">`, skips inlining for **that tag only**. |
+| Attribute            | Description                                                           |
+| -------------------- | --------------------------------------------------------------------- |
+| `data-no-inline-css` | On a `<link rel="stylesheet">`, skips inlining for **that tag only**. |
 
 ## Publishing
 

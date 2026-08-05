@@ -24,7 +24,7 @@ export default {
 
 ### 3. Link stylesheets in HTML as usual
 
-```html
+```tsx
 <!doctype html>
 <html lang="en">
   <head>
@@ -52,7 +52,7 @@ At build time, matching `<link rel="stylesheet">` tags become `<style data-inlin
 
 ### Optional: skip one stylesheet
 
-```html
+```tsx
 <link rel="stylesheet" href="./static/deferred.css" data-no-inline-css />
 ```
 
